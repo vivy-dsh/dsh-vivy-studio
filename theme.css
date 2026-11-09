@@ -727,7 +727,7 @@ html[data-dsh-skin="diva"] [class*="sidebarCol"] {
 }
 
 html[data-dsh-skin="diva"] [class*="centerCol"],
-html[data-dsh-skin="diva"] [class*="nd_X0W_root"] {
+html[data-dsh-skin="diva"] [data-slot="main.conversation"] > [data-phase] {
   background-image: var(--diva-watercolor), var(--diva-fiber);
 }
 
@@ -744,28 +744,24 @@ html[data-dsh-skin="diva"] [class*="nd_X0W_root"] {
    The browser's focus ring is re-stated in the skin's own colour wherever a
    shadow is replaced, so the hand-drawn look never costs a focus indicator.
    --------------------------------------------------------------------------- */
-html[data-dsh-skin="diva"] [class*="FTowUG_card"] {
-  border: 1.5px solid var(--diva-rule);
-  border-radius: var(--diva-wobble-card);
-  box-shadow: 3px 4px 0 -1px var(--diva-lede);
-  position: relative;
-}
-
-html[data-dsh-skin="diva"] [class*="FTowUG_card"]::after {
-  content: "";
-  position: absolute;
-  inset: -3px 1px 1px -3px;
-  border: 1px solid var(--diva-rule-soft);
-  border-radius: 26px 22px 25px 21px;
-  transform: rotate(-0.35deg);
-  pointer-events: none;
-}
-
-html[data-dsh-skin="diva"] [class*="FTowUG_card"]:focus-within {
-  border-color: var(--dsw-alias-brand-primary);
+/* The composer owns a stable data attribute across shell builds. A warm rim
+   and two coloured shadows make one soft halo; focus brings it forward. */
+html[data-dsh-skin="diva"] [data-composer-card] {
+  border: 1px solid rgb(255 111 97 / 0.2);
+  border-radius: 22px;
   box-shadow:
-    3px 4px 0 -1px var(--diva-lede),
-    0 0 0 3px rgb(255 111 97 / 0.16);
+    -8px 0 30px -10px rgb(255 149 56 / 0.28),
+    8px 3px 32px -10px rgb(255 92 138 / 0.24),
+    0 4px 16px -8px rgb(255 111 97 / 0.18);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+html[data-dsh-skin="diva"] [data-composer-card]:focus-within {
+  border-color: rgb(234 85 96 / 0.6);
+  box-shadow:
+    0 0 0 3px rgb(255 111 97 / 0.1),
+    -10px 0 38px -8px rgb(255 149 56 / 0.36),
+    10px 4px 40px -8px rgb(255 92 138 / 0.3);
 }
 
 /* The two round controls in the composer are pebbles, not circles. */
@@ -778,30 +774,40 @@ html[data-dsh-skin="diva"] [class*="FTowUG_primary"]:not(:disabled) {
   box-shadow: 1.5px 2px 0 var(--diva-lede);
 }
 
-/* 新会话 — the one filled action in the sidebar, so it takes the full recipe:
-   paper wash, pencil rule, and a second outline drawn slightly askew. The
+/* 新会话 — a rose-tinted paper frame, using the same pigment as the skin. The
    button is named `button` on purpose: a bare `[class*="newSession"]` also
    matches the spans inside it (newSessionLabelMask, newSessionContent,
    newSessionLabel, newSessionShortcut), painting an offset outline on each. */
 html[data-dsh-skin="diva"] button[class*="newSession"] {
-  border: 1.5px solid var(--diva-rule);
-  border-radius: var(--diva-wobble-chip);
-  background-image: linear-gradient(102deg, rgb(255 149 56 / 0.14), rgb(255 92 138 / 0.12) 62%, rgb(255 111 97 / 0.1));
-  box-shadow: 2px 2px 0 -1px var(--diva-lede);
-}
-
-html[data-dsh-skin="diva"] button[class*="newSession"]::after {
-  content: "";
-  position: absolute;
-  inset: 1px -1px -2px 1px;
-  border: 1px solid rgb(120 86 62 / 0.18);
-  border-radius: 11px 9px 10px 12px;
-  transform: rotate(-0.5deg);
-  pointer-events: none;
+  border: 2px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 42%, var(--dsw-alias-bg-base));
+  border-radius: 12px 15px 11px 14px;
+  background-color: var(--dsw-alias-bg-base);
+  background-image: linear-gradient(106deg, rgb(255 149 56 / 0.045), rgb(255 92 138 / 0.055));
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, transparent);
+  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease, transform 120ms ease;
 }
 
 html[data-dsh-skin="diva"] button[class*="newSession"]:hover {
-  background-image: linear-gradient(102deg, rgb(255 149 56 / 0.2), rgb(255 92 138 / 0.17) 62%, rgb(255 111 97 / 0.14));
+  border-color: color-mix(in srgb, var(--dsw-alias-brand-primary) 62%, var(--dsw-alias-bg-base));
+  background-color: color-mix(in srgb, var(--dsw-alias-brand-primary) 4%, var(--dsw-alias-bg-base));
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--dsw-alias-brand-primary) 26%, transparent);
+}
+
+html[data-dsh-skin="diva"] button[class*="newSession"]:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, transparent);
+}
+
+html[data-dsh-skin="diva"] button[class*="newSession"]:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-dsh-skin="diva"] [data-composer-card],
+  html[data-dsh-skin="diva"] button[class*="newSession"] {
+    transition: none;
+  }
 }
 
 /* Rows in the sidebar and the workspace tree keep the shell's geometry and take

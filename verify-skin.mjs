@@ -70,6 +70,7 @@ const managerParked = managerBefore === null ? null : await skinManager('PUT', {
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+await page.emulateMedia({ reducedMotion: 'reduce' })
 const pageErrors = []
 page.on('pageerror', (error) => { pageErrors.push(String(error)) })
 await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60_000 })
@@ -528,8 +529,10 @@ const chromeAt = async (skin) => {
 
     /* The paper and the pencil. */
     const sidebar = document.querySelector('[class*="sidebarCol"]')
-    const canvas = document.querySelector('[class*="nd_X0W_root"], [class*="centerCol"]')
-    const card = document.querySelector('[class*="FTowUG_card"]')
+    // Measure the visible conversation surface, not the column behind it.
+    const canvas = document.querySelector('[data-slot="main.conversation"] > [data-phase]')
+      ?? document.querySelector('[class*="centerCol"]')
+    const card = document.querySelector('[data-composer-card]')
     const session = document.querySelector('[class*="newSession"]')
     const badge = document.querySelector('[class*="previewBadge"]')
     const styleOf = (node, pseudo) => (node === null ? null : getComputedStyle(node, pseudo))
@@ -557,7 +560,7 @@ const chromeAt = async (skin) => {
 
     /* The focus ring is the one thing a hand-drawn shadow must not eat, so the
        composer is actually focused and re-measured. */
-    const input = document.querySelector('[class*="FTowUG_input"]')
+    const input = document.querySelector('[data-composer-input]')
     input?.focus()
     const cardFocused = card === null ? null : {
       borderColor: getComputedStyle(card).borderColor,
@@ -738,32 +741,31 @@ check(
    device pixels, so at devicePixelRatio 1 it reports 1px and on a Retina display
    it reports 1.5px; both are the same declaration and both are accepted here. */
 check(
-  'diva: the composer is drawn — uneven corners, pencil rule, ink shadow',
+  'diva: the composer carries a rounded orange-pink glow',
   divaChrome.card !== null &&
-    new Set(divaChrome.card.radius.split(/\s+/)).size === 4 &&
-    /^1(?:\.5)?px solid/.test(divaChrome.card.border) &&
-    /3px 4px 0px -1px/.test(divaChrome.card.shadow),
+    divaChrome.card.radius === '22px' &&
+    /30px/.test(divaChrome.card.shadow) && /32px/.test(divaChrome.card.shadow),
   `${divaChrome.card?.radius} / ${divaChrome.card?.border} / ${divaChrome.card?.shadow}`,
 )
 check(
-  'diva: the composer is drawn twice, the second outline askew',
-  divaChrome.cardSketch?.content === '""' && /matrix/.test(divaChrome.cardSketch.transform) && /1px solid/.test(divaChrome.cardSketch.border),
+  'diva: the composer has no offset sketch outline',
+  divaChrome.cardSketch?.content === 'none',
   `${divaChrome.cardSketch?.content} / ${divaChrome.cardSketch?.transform} / ${divaChrome.cardSketch?.border}`,
 )
 check(
-  'diva: the focus ring survives the hand-drawn shadow',
+  'diva: focus enhances the composer glow with a clear ring',
   divaChrome.cardFocused !== null &&
-    divaChrome.cardFocused.borderColor === divaChrome.brandText &&
     /0px 0px 0px 3px/.test(divaChrome.cardFocused.shadow),
   `${divaChrome.cardFocused?.borderColor} vs brand ${divaChrome.brandText} / ${divaChrome.cardFocused?.shadow}`,
 )
 check(
-  'diva: the sidebar action is a sheet of paper, not a plain button',
+  'diva: the sidebar action has a rose paper frame and a subtle print shadow',
   divaChrome.session !== null &&
     new Set(divaChrome.session.radius.split(/\s+/)).size === 4 &&
-    /^1(?:\.5)?px solid/.test(divaChrome.session.border) &&
+    /^2px solid/.test(divaChrome.session.border) &&
+    /2px 2px 0px 0px/.test(divaChrome.session.shadow) &&
     /linear-gradient/.test(divaChrome.session.background) &&
-    divaChrome.sessionSketch?.content === '""',
+    divaChrome.sessionSketch?.content === 'none',
   `${divaChrome.session?.radius} / ${divaChrome.session?.border} / sketch ${divaChrome.sessionSketch?.content}`,
 )
 check(

@@ -65,13 +65,12 @@ pins. No other plugin from that repository is installed here.
   this one: the ambience was measured as *painted* and was in fact invisible).
   The washes follow the surfaces' own palette rather than a fixed colour, so the
   light still moves if the palette does.
-- The hand-drawn kit: the composer card, the sidebar's action button and the
-  navigation rows take uneven four-value corner radii, a 1.5px warm-ink rule
-  instead of a hairline, a second outline rotated a third of a degree off true,
-  and an ink shadow whose blur is zero — a drawn edge, not a lit one. The
-  composer's `:focus-within` ring re-states itself on top of all of it, so the
-  keyboard focus indicator is never eaten by the drawing (checked by focusing the
-  input in `verify-skin.mjs`, not by reading the rule).
+- The composer card carries a soft orange-pink glow that strengthens on focus.
+  The sidebar's new-session button uses a rose-tinted paper frame, a faint
+  orange-pink wash and a subtle offset print shadow; pressing it depresses the
+  frame. Its pigment comes from the skin's brand token, and it has no glow.
+  Keyboard focus keeps a clear outline. Navigation rows retain their uneven
+  corners. Reduced-motion preferences disable transitions.
 - The badge beside the title is the reference's stamp: an organic radius, a
   coral wash, a double ring and a four-degree tilt. The shell already renders
   one there, so it is dressed rather than hidden.
