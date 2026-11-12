@@ -214,120 +214,138 @@ const sheet = await page.evaluate(() => {
 check('stylesheet parsed by the browser', sheet.count > 0, `${sheet.count} rules`)
 check('every live rule reached the sheet', sheet.missing.length === 0, sheet.missing.join(', '))
 
-/* The VIVY心核 group. sidebar-core.js enhances the nav React owns, and which rows
-   end up in it moves with what is installed and pinned, so every count below is
-   read off the page. The run starts from a known state rather than from
-   whatever a previous session left in storage. */
-const CORE_KEY = 'dsh.vivy.sidebar.core.v1'
-const coreProbe = () => page.evaluate((key) => {
+/* The VIVY心核 and VIVY工具 groups. sidebar-core.js enhances the nav React owns,
+   and which rows end up in each group moves with what is installed and pinned,
+   so every count below is read off the page. The run starts from a known state
+   rather than from whatever a previous session left in storage. */
+const GROUP_KEYS = { core: 'dsh.vivy.sidebar.core.v1', tools: 'dsh.vivy.sidebar.tools.v1' }
+const GROUP_IDS = ['core', 'tools']
+const groupProbe = () => page.evaluate((keys) => {
   const nav = document.querySelector('nav[class*="panelList"]')
-  const heads = [...document.querySelectorAll('.diva-core-head')]
-  const head = heads[0] ?? null
-  const KEEP = /^(插件|plugins|自动化任务|automation( tasks)?|相遇|更多|more)$/i
   const name = (el) => (el.getAttribute('aria-label') || '').trim()
-  const rows = nav === null ? [] : [...nav.querySelectorAll(':scope > button')].filter((el) => el.className.includes('panelRow'))
-  const members = nav === null ? [] : [...nav.querySelectorAll(':scope > .diva-core-row')]
-  const resident = rows.filter((row) => KEEP.test(name(row)))
+  const KEEP = /^(插件|plugins|自动化任务|automation( tasks)?|相遇|更多|more)$/i
   const shown = (el) => el !== null && getComputedStyle(el).display !== 'none'
-  const box = (el) => el === null ? null : el.getBoundingClientRect()
-  const headBox = box(head)
-  const rowBox = box(rows[0] ?? null)
-  const heart = head === null ? null : head.querySelector('.diva-core-heart')
-  const chevron = head === null ? null : head.querySelector('.diva-core-chevron')
-  const label = head === null ? null : head.querySelector('.diva-core-label')
-  const member = members[0] ?? null
-  const memberStyle = member === null ? null : getComputedStyle(member)
+  const rows = nav === null ? [] : [...nav.querySelectorAll(':scope > button')].filter((el) => el.className.includes('panelRow'))
+  const resident = rows.filter((row) => KEEP.test(name(row)))
+  const heads = [...document.querySelectorAll('[data-diva-head]')]
+  const groups = Object.keys(keys).map((id) => {
+    const head = heads.find((candidate) => candidate.dataset.divaHead === id) ?? null
+    const members = nav === null ? [] : [...nav.querySelectorAll(`:scope > .diva-core-row[data-diva-group="${id}"]`)]
+    const glyph = head === null ? null : head.querySelector('.diva-core-heart, .diva-tools-glyph')
+    const chevron = head === null ? null : head.querySelector('.diva-core-chevron')
+    const label = head === null ? null : head.querySelector('.diva-core-label')
+    const member = members[0] ?? null
+    const memberStyle = member === null ? null : getComputedStyle(member)
+    const headBox = head === null ? null : head.getBoundingClientRect()
+    const rowBox = rows[0] === undefined ? null : rows[0].getBoundingClientRect()
+    return {
+      headCount: heads.filter((candidate) => candidate.dataset.divaHead === id).length,
+      label: label === null ? null : label.textContent.trim(),
+      expanded: head?.getAttribute('aria-expanded') ?? null,
+      headDisplay: head === null ? null : getComputedStyle(head).display,
+      rail: nav?.dataset.divaRail ?? null,
+      state: nav?.dataset[id === 'core' ? 'divaCore' : 'divaTools'] ?? null,
+      members: members.length,
+      memberLabels: members.map(name),
+      memberShown: members.every(shown),
+      headAboveMembers: head !== null && members.length > 0 && head.nextElementSibling === members[0],
+      headHeight: headBox === null ? null : Math.round(headBox.height),
+      rowHeight: rowBox === null ? null : Math.round(rowBox.height),
+      headPad: head === null ? null : getComputedStyle(head).padding,
+      rowPad: rows[0] === undefined ? null : getComputedStyle(rows[0]).padding,
+      headChildren: head === null ? null : [...head.children].map((el) => el.className?.baseVal ?? el.className),
+      glyphW: glyph === null ? null : Math.round(glyph.getBoundingClientRect().width),
+      chevronW: chevron === null ? null : Math.round(chevron.getBoundingClientRect().width),
+      chevronRightGap: (chevron === null || headBox === null) ? null : Math.round(headBox.right - chevron.getBoundingClientRect().right),
+      glyphLeftGap: (glyph === null || headBox === null) ? null : Math.round(glyph.getBoundingClientRect().left - headBox.left),
+      labelBetween: (glyph === null || chevron === null || label === null) ? null
+        : glyph.getBoundingClientRect().right <= label.getBoundingClientRect().left
+        && label.getBoundingClientRect().right <= chevron.getBoundingClientRect().left,
+      memberDisplay: member === null ? null : memberStyle.display,
+      memberIndent: member === null ? null : memberStyle.paddingLeft,
+      memberWidth: member === null ? null : Math.round(member.getBoundingClientRect().width),
+      memberGlyph: member === null ? null : Math.round(member.querySelector('svg')?.getBoundingClientRect().width ?? 0),
+      memberShadow: member === null ? null : memberStyle.boxShadow,
+      memberBorderLeft: member === null ? null : memberStyle.borderLeftWidth,
+    }
+  })
+  const stored = {}
+  for (const id of Object.keys(keys)) stored[id] = localStorage.getItem(keys[id])
   return {
-    headCount: heads.length,
-    label: head === null ? null : head.textContent.trim(),
-    expanded: head?.getAttribute('aria-expanded') ?? null,
-    headDisplay: head === null ? null : getComputedStyle(head).display,
-    rail: nav?.dataset.divaRail ?? null,
-    state: nav?.dataset.divaCore ?? null,
+    heads: heads.length,
     rows: rows.length,
-    members: members.length,
     resident: resident.length,
     residentLabels: resident.map(name),
-    memberLabels: members.map(name),
-    residentMarked: members.filter((row) => KEEP.test(name(row))).length,
-    headAboveMembers: head !== null && members.length > 0 && head.nextElementSibling === members[0],
-    /* The shell files 自动化任务 at the same `order` as two of the members, and
-       renders it after them; the script moves it back in front. Every resident
-       row therefore precedes the header. */
-    residentsAboveHead: head !== null && resident.every((row) => (head.compareDocumentPosition(row) & 4) === 0),
-    /* Peer, not caption: the same box the shell gives a panel row. */
-    headHeight: headBox === null ? null : Math.round(headBox.height),
-    rowHeight: rowBox === null ? null : Math.round(rowBox.height),
-    headPad: head === null ? null : getComputedStyle(head).padding,
-    rowPad: rows[0] === undefined ? null : getComputedStyle(rows[0]).padding,
-    /* The caption reads glyph, caption, disclosure — and the disclosure is the
-       last child, at the row's trailing edge. */
-    headChildren: head === null ? null : [...head.children].map((el) => el.className?.baseVal ?? el.className),
-    heartW: heart === null ? null : Math.round(heart.getBoundingClientRect().width),
-    chevronW: chevron === null ? null : Math.round(chevron.getBoundingClientRect().width),
-    chevronRightGap: (chevron === null || headBox === null) ? null : Math.round(headBox.right - chevron.getBoundingClientRect().right),
-    heartLeftGap: (heart === null || headBox === null) ? null : Math.round(heart.getBoundingClientRect().left - headBox.left),
-    labelBetween: (heart === null || chevron === null || label === null) ? null
-      : heart.getBoundingClientRect().right <= label.getBoundingClientRect().left
-      && label.getBoundingClientRect().right <= chevron.getBoundingClientRect().left,
-    memberDisplay: member === null ? null : memberStyle.display,
-    memberIndent: member === null ? null : memberStyle.paddingLeft,
-    memberWidth: member === null ? null : Math.round(member.getBoundingClientRect().width),
-    memberGlyph: member === null ? null : Math.round(member.querySelector('svg')?.getBoundingClientRect().width ?? 0),
-    /* Nothing is drawn down the members' left edge any more: the indent alone
-       says who they hang under. */
-    memberShadow: member === null ? null : memberStyle.boxShadow,
-    memberBorderLeft: member === null ? null : memberStyle.borderLeftWidth,
     residentShown: resident.every(shown),
-    stored: localStorage.getItem(key),
+    residentMarked: rows.filter((row) => row.classList.contains('diva-core-row') && KEEP.test(name(row))).length,
+    residentsAboveHead: heads.length > 0 && resident.every((row) => (heads[0].compareDocumentPosition(row) & 4) === 0),
+    groups,
+    stored,
   }
-}, CORE_KEY)
-const coreReset = async (value) => {
+}, GROUP_KEYS)
+const groupReset = async (id, value) => {
   await page.evaluate(([key, state]) => {
     localStorage.setItem(key, state)
     // The script syncs on a DOM mutation, and storage changes are not one.
     const poke = document.createElement('div')
     document.body.append(poke)
     poke.remove()
-  }, [CORE_KEY, value])
+  }, [GROUP_KEYS[id], value])
   await page.waitForTimeout(400)
 }
-await coreReset('expanded')
-const core = await coreProbe()
-check('core: one header, reading VIVY心核', core.headCount === 1 && core.label === 'VIVY心核', `${core.headCount} header(s) labelled ${core.label}`)
-check('core: the header sits directly above its members', core.headAboveMembers && core.expanded === 'true' && core.state === 'expanded', `above ${core.headAboveMembers} / aria-expanded ${core.expanded}`)
-check('core: membership is the panel list minus the resident rows', core.members > 0 && core.members === core.rows - core.resident && core.residentMarked === 0, `${core.members} of ${core.rows} rows, ${core.residentMarked} resident marked`)
-check('core: the resident rows are the ones expected', core.residentLabels.length >= 2 && core.residentLabels.every((label) => /插件|plugins|自动化|automation|相遇|更多|more/i.test(label)), core.residentLabels.join(', '))
+for (const id of GROUP_IDS) await groupReset(id, 'expanded')
+const start = await groupProbe()
+const [coreOpen, toolsOpen] = start.groups
+check('groups: one header each, reading the product names', start.heads === 2 && coreOpen.headCount === 1 && toolsOpen.headCount === 1 && coreOpen.label === 'VIVY心核' && toolsOpen.label === 'VIVY工具', `${start.heads} header(s) labelled ${coreOpen.label} / ${toolsOpen.label}`)
+check('groups: each header sits directly above its members', coreOpen.headAboveMembers && toolsOpen.headAboveMembers && coreOpen.expanded === 'true' && toolsOpen.expanded === 'true' && coreOpen.state === 'expanded' && toolsOpen.state === 'expanded', `core ${coreOpen.headAboveMembers}/${coreOpen.state}, tools ${toolsOpen.headAboveMembers}/${toolsOpen.state}`)
+check('groups: 工具 holds 上下文洞察', toolsOpen.members > 0 && toolsOpen.memberLabels.every((label) => /上下文洞察|context insights/i.test(label)), `${toolsOpen.members} member(s): ${toolsOpen.memberLabels.join(', ')}`)
+check('groups: membership is the panel list minus the resident rows', coreOpen.members > 0 && coreOpen.members === start.rows - start.resident - toolsOpen.members && start.residentMarked === 0, `${coreOpen.members} core + ${toolsOpen.members} tools of ${start.rows} rows, ${start.residentMarked} resident marked`)
+check('groups: 心核 keeps every panel that is not a tool', coreOpen.memberLabels.every((label) => !/上下文洞察|context insights/i.test(label)), coreOpen.memberLabels.join(', '))
+check('groups: the resident rows are the ones expected', start.residentLabels.length >= 2 && start.residentLabels.every((label) => /插件|plugins|自动化|automation|相遇|更多|more/i.test(label)), start.residentLabels.join(', '))
 /* 自动化任务 shares its registration order with two of the members and renders
-   after them; the group must not be allowed to land between it and 插件. */
-check('core: every resident row sits above the group', core.residentsAboveHead, `${core.residentLabels.join(', ')} above ${core.residentsAboveHead}`)
-check('core: the header is a panel row, not a caption', core.headHeight === core.rowHeight && core.headPad === core.rowPad && core.headHeight >= 32, `${core.headHeight}px vs ${core.rowHeight}px row, pad ${core.headPad} vs ${core.rowPad}`)
-check('core: the header reads heart, caption, disclosure — right —', core.headChildren?.length === 3 && /heart/.test(core.headChildren[0]) && /label/.test(core.headChildren[1]) && /chevron/.test(core.headChildren[2]) && core.labelBetween === true, (core.headChildren ?? []).join(' / '))
-check('core: the two glyphs frame the caption at the row\'s edges', core.heartW === 16 && core.chevronW === 16 && core.heartLeftGap === 8 && core.chevronRightGap === 8, `heart ${core.heartW}px at +${core.heartLeftGap}, chevron ${core.chevronW}px at -${core.chevronRightGap}`)
-check('core: wide members are indented under the row', core.memberIndent === '22px' && core.memberWidth > 100, `${core.memberIndent} in a ${core.memberWidth}px row`)
-check('core: nothing is drawn down the members\' left edge', core.memberShadow === 'none' && core.memberBorderLeft === '0px', `${core.memberShadow} / border-left ${core.memberBorderLeft}`)
-await page.screenshot({ path: `${OUT}/core-open.png`, fullPage: true })
+   after them; the groups must not be allowed to land between it and 插件. */
+check('groups: every resident row sits above the first group', start.residentsAboveHead, `${start.residentLabels.join(', ')} above ${start.residentsAboveHead}`)
+for (const [id, group] of [['core', coreOpen], ['tools', toolsOpen]]) {
+  check(`${id}: the header is a panel row, not a caption`, group.headHeight === group.rowHeight && group.headPad === group.rowPad && group.headHeight >= 32, `${group.headHeight}px vs ${group.rowHeight}px row, pad ${group.headPad} vs ${group.rowPad}`)
+  check(`${id}: the header reads glyph, caption, disclosure — right —`, group.headChildren?.length === 3 && /heart|tools-glyph/.test(group.headChildren[0]) && /label/.test(group.headChildren[1]) && /chevron/.test(group.headChildren[2]) && group.labelBetween === true, (group.headChildren ?? []).join(' / '))
+  check(`${id}: the two glyphs frame the caption at the row's edges`, group.glyphW === 16 && group.chevronW === 16 && group.glyphLeftGap === 8 && group.chevronRightGap === 8, `glyph ${group.glyphW}px at +${group.glyphLeftGap}, chevron ${group.chevronW}px at -${group.chevronRightGap}`)
+  check(`${id}: wide members are indented under the row`, group.memberIndent === '22px' && group.memberWidth > 100, `${group.memberIndent} in a ${group.memberWidth}px row`)
+  check(`${id}: nothing is drawn down the members' left edge`, group.memberShadow === 'none' && group.memberBorderLeft === '0px', `${group.memberShadow} / border-left ${group.memberBorderLeft}`)
+}
+await page.screenshot({ path: `${OUT}/groups-open.png`, fullPage: true })
 
-await page.locator('.diva-core-head').click()
+await page.locator('[data-diva-head="core"]').click()
 await page.waitForTimeout(300)
-const shut = await coreProbe()
-check('core: shutting the group hides its members and says so', shut.expanded === 'false' && shut.memberDisplay === 'none' && shut.stored === 'collapsed', `aria-expanded ${shut.expanded} / display ${shut.memberDisplay} / stored ${shut.stored}`)
-check('core: the resident rows stay outside the group', shut.residentShown && shut.resident === core.resident, `${shut.residentLabels.join(', ')} visible ${shut.residentShown}`)
+const coreShut = await groupProbe()
+const [coreShutGroup, toolsAfterCore] = coreShut.groups
+check('core: shutting it hides its members and says so', coreShutGroup.expanded === 'false' && coreShutGroup.memberDisplay === 'none' && coreShut.stored.core === 'collapsed', `aria-expanded ${coreShutGroup.expanded} / display ${coreShutGroup.memberDisplay} / stored ${coreShut.stored.core}`)
+check('core: the tools stay open when the core shuts', toolsAfterCore.expanded === 'true' && toolsAfterCore.memberShown && coreShut.residentShown, `tools ${toolsAfterCore.expanded} / members shown ${toolsAfterCore.memberShown}`)
 await page.screenshot({ path: `${OUT}/core-shut.png`, fullPage: true })
 
-await page.locator('.diva-core-head').click()
+await page.locator('[data-diva-head="core"]').click()
 await page.waitForTimeout(300)
-const reopened = await coreProbe()
-check('core: opening it again brings the members back', reopened.expanded === 'true' && reopened.memberDisplay !== 'none' && reopened.stored === 'expanded', `aria-expanded ${reopened.expanded} / display ${reopened.memberDisplay} / stored ${reopened.stored}`)
+const coreBack = await groupProbe()
+check('core: opening it again brings the members back', coreBack.groups[0].expanded === 'true' && coreBack.groups[0].memberDisplay !== 'none' && coreBack.stored.core === 'expanded', `aria-expanded ${coreBack.groups[0].expanded} / display ${coreBack.groups[0].memberDisplay} / stored ${coreBack.stored.core}`)
+
+await page.locator('[data-diva-head="tools"]').click()
+await page.waitForTimeout(300)
+const toolsShut = await groupProbe()
+check('tools: shutting it hides 上下文洞察 and nothing else', toolsShut.groups[1].expanded === 'false' && toolsShut.groups[1].memberDisplay === 'none' && toolsShut.groups[0].memberShown && toolsShut.stored.tools === 'collapsed', `aria-expanded ${toolsShut.groups[1].expanded} / display ${toolsShut.groups[1].memberDisplay} / stored ${toolsShut.stored.tools}`)
+await page.screenshot({ path: `${OUT}/tools-shut.png`, fullPage: true })
+
+await page.locator('[data-diva-head="tools"]').click()
+await page.waitForTimeout(300)
+const toolsBack = await groupProbe()
+check('tools: opening it again brings the member back', toolsBack.groups[1].expanded === 'true' && toolsBack.groups[1].memberDisplay !== 'none' && toolsBack.stored.tools === 'expanded', `aria-expanded ${toolsBack.groups[1].expanded} / display ${toolsBack.groups[1].memberDisplay} / stored ${toolsBack.stored.tools}`)
 
 /* Collapsed rail: click the toggle and re-probe. */
 await page.locator('button[class*="toggle"]').first().click({ force: true })
 await page.waitForTimeout(1500)
 const collapsed = await probe()
 check('rail: gem replaces the fish when collapsed', collapsed.railGem.includes('data:image/svg+xml'), collapsed.railGem)
-const coreRail = await coreProbe()
-check('rail: the group header steps out, the members stay', coreRail.rail === 'true' && coreRail.headDisplay === 'none' && coreRail.memberDisplay !== 'none', `rail ${coreRail.rail} / header ${coreRail.headDisplay} / members ${coreRail.memberDisplay}`)
-check('rail: members keep the rail geometry the shell gives them', coreRail.memberWidth === 36 && coreRail.memberIndent === '0px' && coreRail.memberGlyph > 0, `${coreRail.memberWidth}px row, ${coreRail.memberIndent} indent, ${coreRail.memberGlyph}px glyph`)
+const railGroups = await groupProbe()
+check('rail: both headers step out, the members stay', railGroups.groups.every((group) => group.rail === 'true' && group.headDisplay === 'none' && group.memberDisplay !== 'none'), `rail ${railGroups.groups.map((group) => group.rail).join('/')} / headers ${railGroups.groups.map((group) => group.headDisplay).join('/')} / members ${railGroups.groups.map((group) => group.memberDisplay).join('/')}`)
+check('rail: members keep the rail geometry the shell gives them', railGroups.groups.every((group) => group.memberWidth === 36 && group.memberIndent === '0px' && group.memberGlyph > 0), railGroups.groups.map((group) => `${group.memberWidth}px row, ${group.memberIndent} indent, ${group.memberGlyph}px glyph`).join(' | '))
 await page.screenshot({ path: `${OUT}/03-diva-rail.png`, fullPage: true })
 
 /* Dark scheme. */
@@ -501,14 +519,14 @@ const chromeAt = async (skin) => {
     const brandText = getComputedStyle(brandProbe).color
     brandProbe.remove()
 
-    /* The VIVY心核 caption sits in a list of panel names, so it has to be set in
-       the same face as the row above it — the interface face, in every skin. The
-       display hand belongs on the wordmark and the title, not on a row a reader
-       picks from. */
-    const coreLabel = document.querySelector('.diva-core-label')
+    /* The VIVY心核 and VIVY工具 captions sit in a list of panel names, so they
+       have to be set in the same face as the row above them — the interface face,
+       in every skin. The display hand belongs on the wordmark and the title, not
+       on a row a reader picks from. */
+    const groupLabels = [...document.querySelectorAll('.diva-core-label')]
     const panelRow = document.querySelector('nav[class*="panelList"] > button[class*="panelRow"]')
     const groupType = {
-      label: coreLabel === null ? null : getComputedStyle(coreLabel).fontFamily,
+      labels: groupLabels.map((label) => getComputedStyle(label).fontFamily),
       row: panelRow === null ? null : getComputedStyle(panelRow).fontFamily,
     }
 
@@ -671,8 +689,8 @@ check('diva: the bright gradient is not used for the marks', divaChrome.pens.eve
 check('diva: headings keep the shell type, not a hand', !divaChrome.headingHand && !vivyChrome.headingHand, `diva ${divaChrome.headingFamily.slice(0, 24)} / vivy ${vivyChrome.headingFamily.slice(0, 24)}`)
 /* The group caption is a panel name among panel names: same face as the row above
    it, in both skins, and never the display hand. */
-check('diva: the sidebar group reads in the interface face', divaChrome.groupType.label !== null && divaChrome.groupType.label === divaChrome.groupType.row && !/Diva Lettering/.test(divaChrome.groupType.label), `caption ${divaChrome.groupType.label?.slice(0, 30)} / row ${divaChrome.groupType.row?.slice(0, 30)}`)
-check('vivy: the sidebar group reads in the interface face', vivyChrome.groupType.label !== null && vivyChrome.groupType.label === vivyChrome.groupType.row && !/Diva Lettering/.test(vivyChrome.groupType.label), `caption ${vivyChrome.groupType.label?.slice(0, 30)} / row ${vivyChrome.groupType.row?.slice(0, 30)}`)
+check('diva: the sidebar groups read in the interface face', divaChrome.groupType.labels.length > 0 && divaChrome.groupType.labels.every((face) => face === divaChrome.groupType.row) && !/Diva Lettering/.test(divaChrome.groupType.row ?? ''), `${divaChrome.groupType.labels.length} caption(s) ${divaChrome.groupType.labels[0]?.slice(0, 30)} / row ${divaChrome.groupType.row?.slice(0, 30)}`)
+check('vivy: the sidebar groups read in the interface face', vivyChrome.groupType.labels.length > 0 && vivyChrome.groupType.labels.every((face) => face === vivyChrome.groupType.row) && !/Diva Lettering/.test(vivyChrome.groupType.row ?? ''), `${vivyChrome.groupType.labels.length} caption(s) ${vivyChrome.groupType.labels[0]?.slice(0, 30)} / row ${vivyChrome.groupType.row?.slice(0, 30)}`)
 check('diva: the script removes the marks again under another skin', vivyChrome.marks.length === 0, `${vivyChrome.marks.length} left`)
 check('diva: the hero keeps the serif under vivy', vivyChrome.heroSerif && !vivyChrome.heroAfterGradientFill, `serif ${vivyChrome.heroSerif} / gradient ${vivyChrome.heroAfterGradientFill}`)
 
@@ -843,29 +861,31 @@ await chromeAt(null)
 /* The choice is a preference, so it has to outlive the session that made it. A
    reload goes back to whatever the running process serves, so this can only be
    measured when that is already this revision of the script. */
-await page.locator('.diva-core-head').click()
+await page.locator('[data-diva-head="core"]').click()
 await page.waitForTimeout(300)
-const beforeReload = await coreProbe()
+const beforeReload = await groupProbe()
 await page.reload({ waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(4000)
-const afterReload = await coreProbe()
+const afterReload = await groupProbe()
 const servedScriptFresh = servedJs === injectedJs
 check(
-  'core: the shut group comes back shut after a reload',
+  'groups: the shut group comes back shut after a reload',
   servedScriptFresh
-    ? beforeReload.stored === 'collapsed' && afterReload.headCount === 1 && afterReload.expanded === 'false' && afterReload.memberDisplay === 'none'
+    ? beforeReload.stored.core === 'collapsed' && afterReload.heads === 2
+      && afterReload.groups[0].expanded === 'false' && afterReload.groups[0].memberDisplay === 'none'
+      && afterReload.groups[1].expanded === 'true'
     : true,
   servedScriptFresh
-    ? `${beforeReload.stored} -> ${afterReload.state}, ${afterReload.headCount} header, members ${afterReload.memberDisplay}`
+    ? `${beforeReload.stored.core} -> ${afterReload.groups[0].state}, ${afterReload.heads} headers, members ${afterReload.groups[0].memberDisplay}, tools ${afterReload.groups[1].expanded}`
     : 'skipped: the running process serves an older script — restart it and run again',
 )
-await coreReset('expanded')
+for (const id of GROUP_IDS) await groupReset(id, 'expanded')
 
 check('no page errors', pageErrors.length === 0, pageErrors.join(' | '))
 
 if (managerBefore !== null) await skinManager('PUT', managerBefore)
 
-writeFileSync(`${OUT}/assertions.json`, `${JSON.stringify({ results, managerBefore, divaSheet, divaChrome, vivyChrome, staleCheck, servedCssFresh: servedCss === injectedCss, servedScriptFresh, native, bare, light, core, shut, reopened, coreRail, afterReload, collapsed, dark, titleCases, sheet, pageErrors }, null, 2)}\n`)
+writeFileSync(`${OUT}/assertions.json`, `${JSON.stringify({ results, managerBefore, divaSheet, divaChrome, vivyChrome, staleCheck, servedCssFresh: servedCss === injectedCss, servedScriptFresh, native, bare, light, start, coreShut, coreBack, toolsShut, toolsBack, railGroups, afterReload, collapsed, dark, titleCases, sheet, pageErrors }, null, 2)}\n`)
 await browser.close()
 
 const failed = results.filter((entry) => !entry.ok)

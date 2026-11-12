@@ -15,24 +15,30 @@ pins. No other plugin from that repository is installed here.
   replaces `DSH 本地构建` / `DSH Local Build` as well as the release name and
   keeps the `"<session> — "` prefix.
 - Sidebar grouping: every global panel except `插件`, `自动化任务` and `相遇` is folded under
-  a **VIVY心核** group header that opens and shuts (`sidebar-core.js`). The list slot
+  one of two group headers (`sidebar-core.js`) — **VIVY心核** holds the product panels,
+  **VIVY工具** holds the utility ones (`上下文洞察` / `Context Insights` today). The list slot
   hands over a flat, order-sorted list and its contract has no group field, so the
-  header is inserted into the nav React already owns; the membership is read off each
+  headers are inserted into the nav React already owns; the membership is read off each
   row's `aria-label` on every pass rather than pinned to a count, the resident rows are
-  named rather than counted, and the shut state is kept in `localStorage`. The whole-column
-  collapse is left to the shell. In the 56px rail the header steps out and the member
-  icons keep the geometry the shell gives them.
+  named rather than counted, and the shut state is kept in `localStorage` — one key per
+  group, so shutting one leaves the other open. `心核` takes every panel that is not a
+  tool, which means a plugin this script has never heard of still lands somewhere
+  sensible; `工具` is the allow-list that moves a row between the two groups. A group
+  whose last member goes away takes its header with it. The whole-column collapse is
+  left to the shell. In the 56px rail both headers step out and the member icons keep
+  the geometry the shell gives them.
 
-  The header is drawn as a panel row rather than a caption — heart, `VIVY心核`, then the
-  disclosure at the row's trailing edge, on the shell's own 36px box — so it reads as a
-  peer of `插件` and `自动化任务` instead of a title wedged between them. Its caption stays
-  in the interface face in every skin: the display hand is for things that are *set*
+  A header is drawn as a panel row rather than a caption — the group's mark (the heart
+  for `心核`, an open-end wrench for `工具`), the caption, then the disclosure at the
+  row's trailing edge, on the shell's own 36px box — so it reads as a peer of `插件` and
+  `自动化任务` instead of a title wedged between them. Its caption stays in the
+  interface face in every skin: the display hand is for things that are *set*
   (the wordmark, the badge, the title and its marks), not for a row a reader picks from. Panel rows are
   sorted by a per-plugin `order` and more than one plugin ships the same one: SurfCore,
   Superagent and `自动化任务` all register at 10, so `自动化任务` renders after the first
-  two and the header would otherwise land between it and `插件`. A resident row found
-  behind the header is therefore moved back in front of it; the members themselves are
-  only marked, never moved.
+  two and the first header would otherwise land between it and `插件`. A resident row
+  found behind that header is therefore moved back in front of it; the members
+  themselves are only marked, never moved.
 - Skins: two, and they share nothing but the brand.
   - `vivy` is **Fluorite** — concert-hall paper / night ink in light and dark,
     one teal accent, the gem mark, the wide-tracked wordmark, the serif hero
@@ -151,7 +157,7 @@ the palettes through the manager, including its default.
 | one teal accent; gem and haze colours inlined in the SVG data URIs | the gem artwork and the ambience are `--vivy-mark` / `--vivy-haze` tokens | the accent can move without leaving teal behind in the mark or the glow |
 | one skin | a second skin, `diva`: white surfaces from a palette the manager registers, plus a hand-written display face and a gradient chrome layer here (glows, masked gem, gradient wordmark) | the workbench needed a light, white look next to Fluorite, not another tint of it — and a warmer, less corporate voice than the serif Fluorite hero |
 | `brand.js` renamed the document title only | it also appends the main title's five exclamation marks | each mark needs its own colour, and one text node cannot be coloured per character |
-| flat panel list, one row per global panel | the DIVA panels are folded under a `VIVY心核` header that is drawn as a panel row in the interface face, the resident `插件` / `自动化任务` rows stay outside it and above it | the list slot's contract carries no group field and exposes no seam for one, so the header is a DOM enhancement of the nav React owns; it is inserted as a sibling of the rows, the members are only marked, and the one resident row the shell files behind the group (`自动化任务` shares its sort `order` with two members) is moved in front of the header |
+| flat panel list, one row per global panel | the DIVA panels are folded under two headers — `VIVY心核` for the product panels and `VIVY工具` for the utility ones — each drawn as a panel row in the interface face, with the resident `插件` / `自动化任务` rows outside them and above them | the list slot's contract carries no group field and exposes no seam for one, so the headers are a DOM enhancement of the nav React owns; each is inserted as a sibling of its rows, the members are only marked, and the one resident row the shell files behind the groups (`自动化任务` shares its sort `order` with two members) is moved in front of the first header |
 | no verification script | `verify-skin.mjs` | every hook above is a shell internal; the script fails loudly when a DSH upgrade moves one |
 
 ## Files
@@ -161,7 +167,7 @@ the palettes through the manager, including its default.
 | `index.js` | host plugin: `webServer.tapIndex`, product name, favicon, title, and the inlining of the lettering subset |
 | `theme.css` | the Fluorite palette, lockup and copy, and the white skin's paper, hand-drawn kit, lettering and gradient layers |
 | `brand.js` | renames the document title when the shell rewrites it, and appends the main title's five exclamation marks |
-| `sidebar-core.js` | inserts the `VIVY心核` group header into the shell's panel list, keeps the resident rows above it, and keys the group's open/shut and wide/rail state off two attributes on the list |
+| `sidebar-core.js` | inserts the `VIVY心核` and `VIVY工具` group headers into the shell's panel list, keeps the resident rows above them, and keys each group's open/shut and the wide/rail state off data attributes on the list |
 | `fonts/DivaWenKai-brand.woff2` | the 48-glyph LXGW WenKai TC subset the lettering face is cut from (OFL-1.1, licence beside it) |
 | `fonts/README.md` | where that subset came from and the exact `pyftsubset` command to rebuild it |
 | `cordis.patch.yml` | inserts the plugin into the profile tree |
@@ -180,19 +186,21 @@ Offline: the stylesheet covers all 112 official tokens on the pinned sheet.
 PANEL_URL="http://127.0.0.1:3082/?token=…" node verify-skin.mjs
 ```
 
-Live: 93 assertions against a running shell — palette in both schemes, the
+Live: 101 assertions against a running shell — palette in both schemes, the
 sidebar gem and DIVA wordmark in both layout states, the hidden whale, the
 hidden version chip and the geometry it leaves behind, the main title (lettering,
 ink, the pencil stroke behind it, five differently coloured marks a size down
 from it, AA-large contrast of each pen), headings keeping the shell's type,
 the absence of
 the old top rail, and that a modal which is *not* the welcome notice keeps its
-own title and text. It drives the `VIVY心核` group through a real click rather than
-trusting the sheet: one header reading the product name, sitting directly above the
-first member, membership counted against the rows the shell rendered minus the
-resident ones (so a pinned or unpinned panel moves the number), the resident rows
-unmarked and still visible while the group is shut, the members hidden and
-`aria-expanded="false"` and the state stored while shut, the header stepping out in
+own title and text. It drives both groups through a real click rather than
+trusting the sheet: one header each, reading the product names and sitting
+directly above the first member of its own group, membership counted against the
+rows the shell rendered minus the resident ones and the tools (so a pinned or
+unpinned panel moves the number), `上下文洞察` alone in `VIVY工具`, the resident
+rows unmarked and still visible while a group is shut, the members hidden and
+`aria-expanded="false"` and the state stored while shut — with the other group
+left open, since each keeps its own key — the headers stepping out in
 the rail with the members keeping the shell's own 36px row, 0px indent and 18px
 glyph, and the shut state coming back after a reload. The cozy layer is measured
 rather than assumed: that the

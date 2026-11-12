@@ -968,25 +968,26 @@ html[data-dsh-skin="diva"] [data-chat-running] [class*="runningDivider"] {
 }
 
 /* ---------------------------------------------------------------------------
-   The VIVY心核 group.
+   The VIVY心核 and VIVY工具 groups.
 
-   sidebar-core.js writes these hooks: a header button of its own inside the
-   panel nav, a `diva-core-row` class on the member rows, and two attributes on
-   the nav — data-diva-rail (which layout the column settled into) and
-   data-diva-core (whether the group is open). The state lives in the attributes
-   rather than in the sheet because the rail flag has to be measured, not
-   inferred: the shell keeps the wide content mounted for 150ms while the column
-   slides, so its `collapsed` class and the real geometry disagree.
+   sidebar-core.js writes these hooks: a header button of its own per group
+   inside the panel nav, a `diva-core-row` class plus a `data-diva-group`
+   attribute on the member rows, and three attributes on the nav — data-diva-rail
+   (which layout the column settled into), data-diva-core and data-diva-tools
+   (whether each group is open). The state lives in the attributes rather than in
+   the sheet because the rail flag has to be measured, not inferred: the shell
+   keeps the wide content mounted for 150ms while the column slides, so its
+   `collapsed` class and the real geometry disagree.
 
    Everything here is skin-independent and uses the official tokens only — the
-   group is chrome, and chrome stays in the interface face in every skin.
+   groups are chrome, and chrome stays in the interface face in every skin.
    --------------------------------------------------------------------------- */
 
 /* The header is a panel row, not a caption: the shell's own rows are 36px tall
-   on 7px/8px of padding, so the group reads as their peer — 插件, 自动化任务,
-   VIVY心核 sit in one column and the members hang under the third. Spelling the
-   geometry out (instead of leaning on `.panelRow`, a hashed module class) keeps
-   the row intact if the shell renames its own. */
+   on 7px/8px of padding, so each group reads as their peer — 插件, 自动化任务,
+   VIVY心核, VIVY工具 sit in one column and the members hang under their own
+   header. Spelling the geometry out (instead of leaning on `.panelRow`, a hashed
+   module class) keeps the row intact if the shell renames its own. */
 .diva-core-head {
   display: flex;
   align-items: center;
@@ -1014,10 +1015,11 @@ html[data-dsh-skin="diva"] [data-chat-running] [class*="runningDivider"] {
   outline-offset: -2px;
 }
 
-/* The glyph and the disclosure are the shell's 16px panel size, so the heart
-   lines up with the icons of the rows above and below it. The caption takes the
-   slack, which pushes the chevron to the row's trailing edge. */
+/* The glyph and the disclosure are the shell's 16px panel size, so the heart and
+   the tools mark line up with the icons of the rows above and below them. The
+   caption takes the slack, which pushes the chevron to the row's trailing edge. */
 .diva-core-heart,
+.diva-tools-glyph,
 .diva-core-chevron {
   flex: none;
   width: 16px;
@@ -1047,9 +1049,9 @@ html[data-dsh-skin="diva"] [data-chat-running] [class*="runningDivider"] {
   white-space: nowrap;
 }
 
-/* The rail has no room for a caption, so the group is implied: the members keep
-   their icons and their alignment, and the header — a box of ours, not the
-   shell's — is the only thing that goes. */
+/* The rail has no room for a caption, so the groups are implied: the members
+   keep their icons and their alignment, and the headers — boxes of ours, not the
+   shell's — are the only thing that goes. */
 [data-diva-rail="true"] > .diva-core-head {
   display: none;
 }
@@ -1064,8 +1066,13 @@ html[data-dsh-skin="diva"] [data-chat-running] [class*="runningDivider"] {
 }
 
 /* display:none, not visibility:hidden: a shut group should leave the tab order
-   and the accessibility tree, which is what aria-expanded="false" claims. */
-[data-diva-rail="false"][data-diva-core="collapsed"] > .diva-core-row {
+   and the accessibility tree, which is what aria-expanded="false" claims. Each
+   group answers to its own attribute, so shutting one leaves the other open. */
+[data-diva-rail="false"][data-diva-core="collapsed"] > .diva-core-row[data-diva-group="core"] {
+  display: none;
+}
+
+[data-diva-rail="false"][data-diva-tools="collapsed"] > .diva-core-row[data-diva-group="tools"] {
   display: none;
 }
 
