@@ -14,7 +14,7 @@ pins. No other plugin from that repository is installed here.
   The title is rewritten per session, in the interface language, so `brand.js`
   replaces `DSH 本地构建` / `DSH Local Build` as well as the release name and
   keeps the `"<session> — "` prefix.
-- Sidebar grouping: every global panel except `插件`, `自动化任务` and `相遇` is folded under
+- Sidebar grouping: every global panel except `插件`, `自动化任务`, `相遇` and `日常` is folded under
   one of two group headers (`sidebar-core.js`) — **VIVY心核** holds the product panels,
   **VIVY工具** holds the utility ones (`上下文洞察` / `Context Insights` today). The list slot
   hands over a flat, order-sorted list and its contract has no group field, so the

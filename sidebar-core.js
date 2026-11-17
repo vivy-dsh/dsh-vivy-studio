@@ -38,12 +38,13 @@
     { id: "tools", label: "VIVY工具", state: "data-diva-tools", glyph: "wrench" },
   ]
   /* The rows that keep their own place in the list: the resident plugin and
-     automation panels, the character stage, and the More launcher — which is a
-     panel row too, and would otherwise be pulled into a group by being neither
-     of the first two. `相遇` (dsh-live2d) rides at order -10 so it lands above
-     插件; folding it into a group would move it below the resident rows it is
-     meant to sit in front of. */
-  const KEEP = /^(插件|plugins|自动化任务|automation( tasks)?|相遇|更多|more)$/i
+     automation panels, the character stage, the daily page, and the More
+     launcher — which is a panel row too, and would otherwise be pulled into a
+     group by being neither of the first two. `相遇` (dsh-live2d) rides at order
+     -10 and `日常` (dsh-daily) at -5, so both land above 插件; folding either
+     into a group would move it below the resident rows it is meant to sit in
+     front of, and shut it whenever that group shuts. */
+  const KEEP = /^(插件|plugins|自动化任务|automation( tasks)?|相遇|日常|更多|more)$/i
   /* Of those, the launcher closes the list: it belongs after the groups, so it is
      never pulled in front of a header. */
   const TAIL = /^(更多|more)$/i
